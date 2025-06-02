@@ -19,7 +19,7 @@
     dkim_options/0
 ]).
 -export([ensure_content_headers/6, ensure_content_headers/7]).
--export([check_headers/6
+-export([check_headers/1
         ,encode_headers/1
         ,encode_component/5
         ,dkim_sign_email/3
