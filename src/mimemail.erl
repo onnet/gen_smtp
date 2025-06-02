@@ -1,56 +1,3 @@
-%%% Copyright 2009 Andrew Thompson <andrew@hijacked.us>. All rights reserved.
-%%%
-%%% Redistribution and use in source and binary forms, with or without
-%%% modification, are permitted provided that the following conditions are met:
-%%%
-%%%   1. Redistributions of source code must retain the above copyright notice,
-%%%      this list of conditions and the following disclaimer.
-%%%   2. Redistributions in binary form must reproduce the above copyright
-%%%      notice, this list of conditions and the following disclaimer in the
-%%%      documentation and/or other materials provided with the distribution.
-%%%
-%%% THIS SOFTWARE IS PROVIDED BY THE FREEBSD PROJECT ``AS IS'' AND ANY EXPRESS OR
-%%% IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF
-%%% MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO
-%%% EVENT SHALL THE FREEBSD PROJECT OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT,
-%%% INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES
-%%% (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES;
-%%% LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND
-%%% ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
-%%% (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
-%%% SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
-
-%% @doc A module for decoding/encoding MIME 1.0 email.
-%% The encoder and decoder operate on the same data structure, which is as follows:
-%% A 5-tuple with the following elements: `{Type, SubType, Headers, Parameters, Body}'.
-%%
-%% `Type' and `SubType' are the MIME type of the email, examples are `text/plain' or
-%% `multipart/alternative'. The decoder splits these into 2 fields so you can filter by
-%% the main type or by the subtype.
-%%
-%% `Headers' consists of a list of key/value pairs of binary values eg.
-%% `{<<"From">>, <<"Andrew Thompson <andrew@hijacked.us>">>}'. There is no parsing of
-%% the header aside from un-wrapping the lines and splitting the header name from the
-%% header value.
-%%
-%% `Parameters' is a list of 3 key/value tuples. The 3 keys are `<<"content-type-params">>',
-%% `<<"disposition">>' and `<<"disposition-params">>'.
-%% `content-type-params' is a key/value list of parameters on the content-type header, this
-%% usually consists of things like charset and the format parameters. `disposition' indicates
-%% how the data wants to be displayed, this is usually 'inline'. `disposition-params' is a list of
-%% disposition information, eg. the filename this section should be saved as, the modification
-%% date the file should be saved with, etc.
-%%
-%% Finally, `Body' can be one of several different types, depending on the structure of the email.
-%% For a simple email, the body will usually be a binary consisting of the message body, In the
-%% case of a multipart email, its a list of these 5-tuple MIME structures. The third possibility,
-%% in the case of a message/rfc822 attachment, body can be a single 5-tuple MIME structure.
-%%
-%% You should see the relevant RFCs (2045, 2046, 2047, etc.) for more information.
-%%
-%% Note that parts of this module (e.g., `decode/2') use the
-%% <a href="https://hex.pm/packages/iconv"><tt>iconv</tt></a> library for string conversion,
-%% which you will need to explicitly list as a dependency.
 
 -module(mimemail).
 
@@ -72,6 +19,11 @@
     dkim_options/0
 ]).
 -export([ensure_content_headers/6, ensure_content_headers/7]).
+-export([check_headers/6
+        ,encode_headers/1
+        ,encode_component/5
+        ,dkim_sign_email/3
+        ]).
 
 -include_lib("kernel/include/logger.hrl").
 
@@ -202,7 +154,7 @@ encode(MimeMail) ->
 
 %% @doc Encode a MIME tuple to a binary.
 encode({Type, SubType, Headers, ContentTypeParams, Parts}, Options) ->
-    ?LOG_DEBUG("Inside encode", ?LOGGER_META),
+    ?LOG_WARNING("Inside encode", ?LOGGER_META),
     {FixedParams, FixedHeaders} = ensure_content_headers(Type, SubType, ContentTypeParams, Headers, Parts, true),
     CheckedHeaders = check_headers(FixedHeaders),
     EncodedBody = binstr:join(
