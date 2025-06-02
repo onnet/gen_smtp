@@ -23,6 +23,8 @@
         ,encode_headers/1
         ,encode_component/5
         ,dkim_sign_email/3
+        ,encode_component/5
+        ,encode_component_part/1
         ]).
 
 -include_lib("kernel/include/logger.hrl").
