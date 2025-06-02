@@ -71,6 +71,7 @@
     options/0,
     dkim_options/0
 ]).
+-export([ensure_content_headers/6, ensure_content_headers/7]).
 
 -include_lib("kernel/include/logger.hrl").
 
@@ -200,11 +201,12 @@ encode(MimeMail) ->
     encode(MimeMail, []).
 
 %% @doc Encode a MIME tuple to a binary.
-encode({Type, Subtype, Headers, ContentTypeParams, Parts}, Options) ->
-    {FixedParams, FixedHeaders} = ensure_content_headers(Type, Subtype, ContentTypeParams, Headers, Parts, true),
+encode({Type, SubType, Headers, ContentTypeParams, Parts}, Options) ->
+    ?LOG_DEBUG("Inside encode", ?LOGGER_META),
+    {FixedParams, FixedHeaders} = ensure_content_headers(Type, SubType, ContentTypeParams, Headers, Parts, true),
     CheckedHeaders = check_headers(FixedHeaders),
     EncodedBody = binstr:join(
-        encode_component(Type, Subtype, CheckedHeaders, FixedParams, Parts),
+        encode_component(Type, SubType, CheckedHeaders, FixedParams, Parts),
         "\r\n"
     ),
     EncodedHeaders = encode_headers(CheckedHeaders),
@@ -724,6 +726,7 @@ check_headers([Header | Tail], Headers) ->
     end.
 
 ensure_content_headers(Type, SubType, Parameters, Headers, Body, Toplevel) ->
+    ?LOG_ERROR("Inside ensure_content_headers/6", ?LOGGER_META),
     CheckHeaders = [<<"Content-Type">>, <<"Content-Disposition">>, <<"Content-Transfer-Encoding">>],
     CheckHeadersValues = [{Name, get_header_value(Name, Headers)} || Name <- CheckHeaders],
     ensure_content_headers(CheckHeadersValues, Type, SubType, Parameters, lists:reverse(Headers), Body, Toplevel).
@@ -735,6 +738,7 @@ ensure_content_headers(
 ) when
     (Type == <<"text">> andalso SubType =/= <<"plain">>) orelse Type =/= <<"text">>
 ->
+    ?LOG_ERROR("1 Inside ensure_content_headers/7", ?LOGGER_META),
     %% no content-type header, and its not text/plain
     CT = io_lib:format("~s/~s", [Type, SubType]),
     CTP =
@@ -780,6 +784,7 @@ ensure_content_headers(
     Body,
     Toplevel
 ) ->
+    ?LOG_ERROR("2 Inside ensure_content_headers/7", ?LOGGER_META),
     %% no content-type header and its text/plain
     Charset =
         case proplists:get_value(<<"charset">>, maps:get(content_type_params, Parameters, [])) of
@@ -808,6 +813,7 @@ ensure_content_headers(
 ) when
     Type =/= <<"multipart">>
 ->
+    ?LOG_ERROR("3 Inside ensure_content_headers/7", ?LOGGER_META),
     Enc =
         case maps:get(transfer_encoding, Parameters, undefined) of
             undefined ->
@@ -833,6 +839,7 @@ ensure_content_headers(
         Tail, Type, SubType, Parameters, [{<<"Content-Disposition">>, CDH} | Headers], Body, Toplevel
     );
 ensure_content_headers([_ | Tail], Type, SubType, Parameters, Headers, Body, Toplevel) ->
+    ?LOG_ERROR("4 Inside ensure_content_headers/7", ?LOGGER_META),
     ensure_content_headers(Tail, Type, SubType, Parameters, Headers, Body, Toplevel).
 
 guess_charset(Body) ->
